@@ -505,7 +505,7 @@ def eta_wegner(f, Gamma, user_data):
 #-----------------------------------------------------------------------------------
 # derivatives 
 #-----------------------------------------------------------------------------------
-def flow_imsrg2(eta1B, eta2B, f, Gamma, user_data):
+def flow_Magnus2(eta1B, eta2B, f, Gamma, user_data):
 
   dim1B     = user_data["dim1B"]
   holes     = user_data["holes"]
@@ -520,6 +520,7 @@ def flow_imsrg2(eta1B, eta2B, f, Gamma, user_data):
 
   #############################        
   # zero-body flow equation
+  
   dE = 0.0
 
   for i in holes:
@@ -531,7 +532,7 @@ def flow_imsrg2(eta1B, eta2B, f, Gamma, user_data):
       for a in particles:
         for b in particles:
           dE += 0.5 * eta2B[idx2B[(i,j)], idx2B[(a,b)]] * Gamma[idx2B[(a,b)], idx2B[(i,j)]]
-
+  
   #############################
   # one-body flow equation
   df  = np.zeros_like(f)
@@ -633,19 +634,6 @@ def flow_imsrg2(eta1B, eta2B, f, Gamma, user_data):
 #-----------------------------------------------------------------------------------
 # derivative wrapper
 #-----------------------------------------------------------------------------------
-def get_operator_from_y(y, dim1B, dim2B):
-  
-  # reshape the solution vector into 0B, 1B, 2B pieces
-  ptr = 0
-  zero_body = y[ptr]
-
-  ptr += 1
-  one_body = reshape(y[ptr:ptr+dim1B*dim1B], (dim1B, dim1B))
-
-  ptr += dim1B*dim1B
-  two_body = reshape(y[ptr:ptr+dim2B*dim2B], (dim2B, dim2B))
-
-  return zero_body,one_body,two_body
 
 
 def derivative_wrapper(t, y, user_data):
@@ -880,123 +868,25 @@ def calc_2B_norm(two_body, user_data):
 
   return np.sqrt(norm)
 
-#define one-body and two-body of Omega
-def flow_magnus2(A1B, A2B, B1B, B2B, user_data):
-
-  dim1B     = user_data["dim1B"]
-  holes     = user_data["holes"]
-  particles = user_data["particles"]
-  bas2B     = user_data["bas2B"]
-  idx2B     = user_data["idx2B"]
-  basph2B   = user_data["basph2B"]
-  idxph2B   = user_data["idxph2B"]
-  occB_2B   = user_data["occB_2B"]
-  occC_2B   = user_data["occC_2B"]
-  occphA_2B = user_data["occphA_2B"]
-
-  ##############################
-  # one-body flow equation
-  dOmega1B = np.zeros_like(A1B)
-
-  # 1B - 1B
-  dOmega1B = dOmega1B + commutator(A1B, B1B)
-
-  # 1B - 2B
-  for p in range(dim1B):
-    for q in range(dim1B):
-      for i in holes:
-        for a in particles:
-          dOmega1B[p,q] += (
-            A1B[i,a] * B2B[idx2B[(a, p)], idx2B[(i, q)]]
-            - A1B[a,i] * B2B[idx2B[(i, p)], idx2B[(a, q)]]
-            - B2B[i,a] * A2B[idx2B[(a, p)], idx2B[(i, q)]]
-            + B2B[a,i] * A2B[idx2B[(i, p)], idx2B[(a, q)]]
-          )
-
-  # 2B - 2B
-  A2B2 = dot(A2B, dot(occB_2B, B2B))
-  for p in range(dim1B):
-    for q in range(dim1B):
-      for i in holes:
-        dOmega1B[p,q] += 0.5*(
-          A2B2[idx2B[(i, p)], idx2B[(i, q)]]
-          + transpose(A2B2)[idx2B[(i, p)], idx2B[(i, q)]]
-        )
-
-  A2B2 = dot(A2B, dot(occC_2B, B2B))
-  for p in range(dim1B):
-    for q in range(dim1B):
-      for r in range(dim1B):
-        dOmega1B[p,q] += 0.5*(
-          A2B2[idx2B[(r, p)], idx2B[(r, q)]]
-          + transpose(A2B2)[idx2B[(r, p)], idx2B[(r, q)]]
-        )
-
-  ##############################
-  # two-body flow equation
-  dOmega2B = np.zeros_like(A2B)
-
-  # 1B - 2B
-  for p in range(dim1B):
-    for q in range(dim1B):
-      for r in range(dim1B):
-        for s in range(dim1B):
-          for t in range(dim1B):
-            dOmega2B[idx2B[(p, q)], idx2B[(r, s)]] += (
-              A1B[p,t] * B2B[idx2B[(t, q)], idx2B[(r,s)]]
-              + A1B[q,t] * B2B[idx2B[(p, t)], idx2B[(r, s)]]
-              - A1B[t,r] * B2B[idx2B[(p, q)], idx2B[(t, s)]]
-              - A1B[t,s] * B2B[idx2B[(p, q)], idx2B[(r, t)]]
-              - B1B[p,t] * A2B[idx2B[(t, q)], idx2B[(r, s)]]
-              - B1B[q,t] * A2B[idx2B[(p, t)], idx2B[(r, s)]]
-              + B1B[t,r] * A2B[idx2B[(p, q)], idx2B[(t, s)]]
-              + B1B[t,s] * A2B[idx2B[(p, q)], idx2B[(r, t)]]
-            )
 
 
-  # 2B - 2B - particle and hole ladders
-  A2B2 = dot(A2B, dot(occB_2B, B2B))
-
-  dOmega2B = dOmega2B + 0.5 * (A2B2 + transpose(A2B2))
-
-  # 2B - 2B - particle-hole chain
-
-  # transform matrices to particle-hole representation and calculate
-  A2B_ph = ph_transform_2B(A2B, bas2B, idx2B, basph2B, idxph2B)
-  B2B_ph = ph_transform_2B(B2B, bas2B, idx2B, basph2B, idxph2B)
-
-  A2B2_ph = dot(A2B_ph, dot(occphA_2B, B2B_ph))
-
-  # transform back to standard representation
-  A2B2    = inverse_ph_transform_2B(A2B2_ph, bas2B, idx2B, basph2B, idxph2B)
-
-  # commutator / antisymmetrization
-  work = np.zeros_like(A2B2)
-  for i1, (i,j) in enumerate(bas2B):
-    for i2, (k,l) in enumerate(bas2B):
-      work[i1,i2] -= (
-        A2B2[i1,i2]
-        - A2B2[idx2B[(j,i)], i2]
-        - A2B2[i1, idx2B[(l,k)]]
-        + A2B2[idx2B[(j,i)], idx2B[(l,k)]]
-      )
-  A2B2 = work
-
-  dOmega2B = dOmega2B + A2B2
-
-  return dOmega1B, dOmega2B
-
-
+#-----------------------------------------------------------------------------------
+# derivative wrapper
+#-----------------------------------------------------------------------------------
 def get_operator_from_z(z, dim1B, dim2B):
     
-  # reshape the solution vector into 1B, 2B pieces
+  # reshape the solution vector into 0B, 1B, 2B pieces
   ptr = 0
-  Omega1B = reshape(z[ptr:ptr+dim1B*dim1B], (dim1B, dim1B))
+  zero_body = z[ptr]
   
+  ptr += 1
+  one_body = reshape(z[ptr:ptr+dim1B*dim1B], (dim1B, dim1B))
+        
   ptr += dim1B*dim1B
-  Omega2B = reshape(z[ptr:ptr+dim2B*dim2B], (dim2B, dim2B))
-            
-  return Omega1B, Omega2B
+  two_body = reshape(z[ptr:ptr+dim2B*dim2B], (dim2B, dim2B))
+                
+  return zero_body, one_body,two_body
+
 
 
 def derivative_magnus2(t, z, user_data):
@@ -1016,40 +906,45 @@ def derivative_magnus2(t, z, user_data):
   occphA_2B = user_data["occphA_2B"]
   calc_eta  = user_data["calc_eta"]
   calc_rhs  = user_data["calc_rhs"]
-  calc_rhs2 = user_data["calc_rhs2"]
+  #calc_rhs2 = user_data["calc_rhs2"]
   f0        = user_data["f0"]
   Gamma0    = user_data["Gamma0"]
 
   # extract operator pieces from solution vector
-  Omega1B, Omega2B = get_operator_from_z(z, dim1B, dim2B)
+  Omega0B, Omega1B, Omega2B = get_operator_from_z(z, dim1B, dim2B)
 
   # calculate the generator
   eta1B, eta2B = update_operator(Omega1B, Omega2B, user_data)
   
   
   # calculate the right-hand side
-  dOmega1B, dOmega2B = calc_rhs2(Omega1B, Omega2B, eta1B, eta2B, user_data)
+  dOmega0B, dOmega1B, dOmega2B = calc_rhs(Omega1B, Omega2B, eta1B, eta2B, user_data)
+  print (dOmega0B)
+  temp1B = dOmega1B + eta1B
+  temp2B = dOmega2B + eta2B
+  
   dOmega1B = eta1B + Bernoulli(1) * dOmega1B
   dOmega2B = eta2B + Bernoulli(1) * dOmega2B
-  
-  
+  dOmega0B = Bernoulli(1)*dOmega0B
+  print (dOmega0B)
   # share data
   #user_data["dE"] = dE
   user_data["eta_norm"] = np.linalg.norm(eta1B, ord='fro')+np.linalg.norm(eta2B, ord='fro')
   
   i = 2
 
-  eta1B = dOmega1B
-  eta2B = dOmega2B
   while 1:
-    eta1B, eta2B = calc_rhs2(Omega1B, Omega2B, eta1B, eta2B, user_data)
+    temp0B, temp1B, temp2B = calc_rhs(Omega1B, Omega2B, temp1B, temp2B, user_data)
     if Bernoulli(i) == 0:
       i += 1
       continue
-    dOmega1B = dOmega1B + Bernoulli(i) * eta1B / factorial(i)
-    dOmega2B = dOmega2B + Bernoulli(i) * eta2B / factorial(i)
-    norm_one = np.linalg.norm(eta1B)
-    norm_two = np.linalg.norm(eta2B)
+    dOmega1B = dOmega1B + Bernoulli(i) * temp1B / factorial(i)
+    dOmega2B = dOmega2B + Bernoulli(i) * temp2B / factorial(i)
+    
+    dOmega0B = dOmega0B + Bernoulli(i) * temp0B / factorial(i)
+    print (dOmega0B)
+    norm_one = np.linalg.norm(temp1B)
+    norm_two = np.linalg.norm(temp2B)
     
     i += 1
     if norm_one < 1e-6 and norm_two < 1e-7: break
@@ -1058,12 +953,12 @@ def derivative_magnus2(t, z, user_data):
       print ("large iteration 1")
       break
     #if i == 10: break
-
+    #print (dOmega0B)
   # convert derivatives into linear array
   #dz  = np.append([dE], np.append(reshape(df, -1), reshape(dGamma, -1)))
-  dz = []
+  dz = [dOmega0B]
   dz = np.append(dz, np.append(reshape(dOmega1B, -1), reshape(dOmega2B, -1)))
-
+  
   return dz
 
 
@@ -1080,19 +975,19 @@ def update_operator(Omega1B, Omega2B, user_data):
     occB_2B   = user_data["occB_2B"]
     occC_2B   = user_data["occC_2B"]
     occphA_2B = user_data["occphA_2B"]
-    calc_rhs2 = user_data["calc_rhs2"]
+    calc_rhs = user_data["calc_rhs"]
     calc_eta  = user_data["calc_eta"]
     f0        = user_data["f0"]
     Gamma0    = user_data["Gamma0"]
     
-    f, Gamma = calc_rhs2(Omega1B, Omega2B, f0, Gamma0, user_data)
+    E, f, Gamma = calc_rhs(Omega1B, Omega2B, f0, Gamma0, user_data)
     f = f + f0
     Gamma = Gamma + Gamma0
     i = 2
     f1 = f
     Gamma1 = Gamma
     while 1:
-        f1, Gamma1  = calc_rhs2(Omega1B, Omega2B, f1, Gamma1, user_data)
+        E, f1, Gamma1  = calc_rhs(Omega1B, Omega2B, f1, Gamma1, user_data)
         f = f + f1/factorial(i)
         Gamma = Gamma + Gamma1/factorial(i)
         
@@ -1221,8 +1116,8 @@ def main():
 
     "calc_eta":   eta_white,          # specify the generator (function object)
     #"calc_eta":   eta_wegner,
-    "calc_rhs":   flow_imsrg2,        # specify the right-hand side and truncation
-    "calc_rhs2":  flow_magnus2        # specify the right-hand side and truncation
+    "calc_rhs":   flow_Magnus2,        # specify the right-hand side and truncation
+  #"calc_rhs2":  flow_magnus2        # specify the right-hand side and truncation
     
   }
   
@@ -1252,7 +1147,7 @@ def main():
                            
   # reshape Omega into a linear array (initoal ODE vector)
   #z0   = np.append([E], np.append(reshape(f, -1), reshape(Gamma, -1)))
-  z0 = []
+  z0 = [0]
   z0 = np.append(z0, np.append(reshape(Omega1B,-1), reshape(Omega2B, -1)))
 
   # integrate flow equations 
@@ -1274,10 +1169,10 @@ def main():
     zs = solver.integrate(sfinal, step=True)
     #zs = solver.integrate(solver.t + ds)
     dim2B = dim1B*dim1B
-    Omega1B, Omega2B = get_operator_from_z(zs, dim1B, dim2B)
-    
+    Omega0B, Omega1B, Omega2B = get_operator_from_z(zs, dim1B, dim2B)
+    print (Omega0B)
     E, f, Gamma = get_f_Gamma(Omega1B, Omega2B, user_data)
-    
+
     DE2 = calc_mbpt2(f, Gamma, user_data)
     DE3 = calc_mbpt3(f, Gamma, user_data)
 
@@ -1287,7 +1182,7 @@ def main():
     print ("%8.5f %14.8f   %14.8f   %14.8f   %14.8f  %14.8f   %14.8f   %14.8f"%(
       solver.t, E , DE2, DE3, E+DE2+DE3, user_data["eta_norm"], norm_fod, norm_Gammaod))
     if abs(DE2/E) < 10e-8: break
-
+'''
   a = calc_fod_norm(Omega1B, user_data)
   b = calc_Gammaod_norm(Omega2B, user_data)
   print (a)
@@ -1297,7 +1192,7 @@ def main():
   d = np.linalg.norm(Omega2B)
   print (c)
   print (d)
-
+'''
 
 #    solver.integrate(solver.t + ds)
 

@@ -1035,6 +1035,10 @@ def derivative_magnus2(t, z, user_data):
   
   # calculate the right-hand side
   dOmega1B, dOmega2B = calc_rhs2(Omega1B, Omega2B, eta1B, eta2B, user_data)
+  
+  temp1B = dOmega1B + eta1B
+  temp2B = dOmega2B + eta2B
+  
   dOmega1B = eta1B + Bernoulli(1) * dOmega1B
   dOmega2B = eta2B + Bernoulli(1) * dOmega2B
   
@@ -1049,23 +1053,21 @@ def derivative_magnus2(t, z, user_data):
   i = 2
   
   
-  eta1B = dOmega1B
-  eta2B = dOmega2B
   while 1:
-    eta1B, eta2B = calc_rhs2(Omega1B, Omega2B, eta1B, eta2B, user_data)
+    temp1B, temp2B = calc_rhs2(Omega1B, Omega2B, temp1B, temp2B,  user_data)
     if Bernoulli(i) == 0:
       i += 1
       continue
     
-    dOmega1B = dOmega1B + Bernoulli(i) * eta1B / factorial(i)
-    dOmega2B = dOmega2B + Bernoulli(i) * eta2B / factorial(i)
-    norm_one = np.linalg.norm(eta1B) #/ factorial(i)
-    norm_two = np.linalg.norm(eta2B) #/ factorial(i)
+    dOmega1B = dOmega1B + Bernoulli(i) * temp1B / factorial(i)
+    dOmega2B = dOmega2B + Bernoulli(i) * temp2B / factorial(i)
+    norm_one = np.linalg.norm(temp1B) #/ factorial(i)
+    norm_two = np.linalg.norm(temp2B) #/ factorial(i)
     
     if norm_one < 10e-8 and norm_two < 10e-8:  break
     if i > 20:
       print("large iteration")
-      print(norm_one, normt_two)
+      print(norm_one, norm_two)
       break
     #if i == 5:  break
     #if i == 10: break
@@ -1097,19 +1099,21 @@ def test_energy(Omega1B, Omega2B, z0, user_data):
   occC_2B   = user_data["occC_2B"]
   occphA_2B = user_data["occphA_2B"]
   calc_rhs  = user_data["calc_rhs"]
-
+  
+  
   ptr = 0
   E = z0[ptr]
   
   ptr += 1
   f = reshape(z0[ptr:ptr+dim1B*dim1B], (dim1B, dim1B))
-    
+  
   ptr += dim1B*dim1B
   Gamma = reshape(z0[ptr:ptr+dim2B*dim2B], (dim2B, dim2B))
   
+  
   E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f, Gamma, user_data)
 
-  E += E1
+  E = E + E1
   f = f + f1
   Gamma = Gamma + Gamma1
   
@@ -1228,8 +1232,6 @@ def main():
   z0   = np.append([E], np.append(reshape(f, -1), reshape(Gamma, -1)))
   z0   = np.append(z0, np.append(reshape(Omega1B,-1), reshape(Omega2B, -1)))
 
-  a = test_energy(Omega1B, Omega2B, z0, user_data)
-  print (a)
 
   # integrate flow equations 
   solver = ode(derivative_magnus2,jac=None)
