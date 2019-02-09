@@ -1190,16 +1190,13 @@ def test_energy(Omega1B, Omega2B, z0, user_data):
     occphA_2B = user_data["occphA_2B"]
     calc_rhs  = user_data["calc_rhs"]
     factorial = user_data["factorial"]
-        
-    ptr = 0
-    E = z0[ptr]
-    ptr += 1
-    f = reshape(z0[ptr:ptr+dim1B*dim1B], (dim1B, dim1B))
-            
-    ptr += dim1B*dim1B
-    Gamma = reshape(z0[ptr:ptr+dim2B*dim2B], (dim2B, dim2B))
+    E0        = user_data["E0"]
+    f0        = user_data["f0"]
+    Gamma0    = user_data["Gamma0"]
+    
+    
                 
-    E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f, Gamma, user_data)
+    E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f0, Gamma0, user_data)
                         
     E = E + E1
     f = f + f1
