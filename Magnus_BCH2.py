@@ -1198,13 +1198,13 @@ def test_energy(Omega1B, Omega2B, z0, user_data):
                 
     E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f0, Gamma0, user_data)
                         
-    E = E + E1
-    f = f + f1
-    Gamma = Gamma + Gamma1
+    E = E0 + E1
+    f = f0 + f1
+    Gamma = Gamma0 + Gamma1
                                     
                                     
-    f1 = f
-    Gamma1 = Gamma
+    #f1 = f
+    #Gamma1 = Gamma
     i = 2
     while 1:
         E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f1, Gamma1, user_data)
