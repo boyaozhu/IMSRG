@@ -1176,6 +1176,56 @@ def get_f_Gamma(Omega1B, Omega2B, user_data):
     return E, f, Gamma
 
 
+def test_energy(Omega1B, Omega2B, z0, user_data):
+    
+    dim1B     = user_data["dim1B"]
+    dim2B     = dim1B * dim1B
+    holes     = user_data["holes"]
+    particles = user_data["particles"]
+    bas2B     = user_data["bas2B"]
+    idx2B     = user_data["idx2B"]
+    basph2B   = user_data["basph2B"]
+    idxph2B   = user_data["idxph2B"]
+    occB_2B   = user_data["occB_2B"]
+    occC_2B   = user_data["occC_2B"]
+    occphA_2B = user_data["occphA_2B"]
+    calc_rhs  = user_data["calc_rhs"]
+
+        
+    ptr = 0
+    E = z0[ptr]
+    ptr += 1
+    f = reshape(z0[ptr:ptr+dim1B*dim1B], (dim1B, dim1B))
+            
+    ptr += dim1B*dim1B
+    Gamma = reshape(z0[ptr:ptr+dim2B*dim2B], (dim2B, dim2B))
+                
+    E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f, Gamma, user_data)
+                        
+    E = E + E1
+    f = f + f1
+    Gamma = Gamma + Gamma1
+                                    
+                                    
+    f1 = f
+    Gamma1 = Gamma
+    i = 2
+    while 1:
+        E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f1, Gamma1, user_data)
+                                                
+                                                
+        E = E + E1/factorial(i)
+        if E1 < 1e-7:
+            break
+        if i > 10:
+            print ("too large iteration")
+            break
+        i += 1
+                                                                            
+    return E
+
+
+
 #------------------------------------------------------------------------------
 # Main program
 #------------------------------------------------------------------------------
@@ -1314,8 +1364,7 @@ def main():
     if abs(DE2/E) < 10e-8: break
 
   
-    #a = Omega2B - np.diag(np.diag(Omega2B))
-    #print (a.sum())
+    '''
     for i in range(dim2B):
         if Omega2B[i,i] == 0:
             continue
@@ -1324,8 +1373,9 @@ def main():
                 continue
             else:
                 print ("ERROR!!!!!")
-
-
+    '''
+  a = test_energy(Omega1B, Omega2B, z0, user_data)
+  print (a)
 #    solver.integrate(solver.t + ds)
 
 #------------------------------------------------------------------------------
