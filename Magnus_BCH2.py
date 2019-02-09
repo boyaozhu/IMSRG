@@ -663,28 +663,22 @@ def flow_magnus2(Omega1B, Omega2B, eta1B, eta2B, user_data):
           dOmega0B += 0.25*(Omega2B[idx2B[(i,j)], idx2B[(a,b)]] * eta2B[idx2B[(a,b)], idx2B[(i,j)]] \
               - eta2B[idx2B[(i,j)], idx2B[(a,b)]] * Omega2B[idx2B[(a,b)], idx2B[(i,j)]])
   '''
-  #################################
-
+  ################################
+  
   # one-body flow equation
   dOmega1B = np.zeros_like(Omega1B)
-
+  
   # 1B - 1B
-  dOmega1B += anticommutator(Omega1B, eta1B)
+  dOmega1B = dOmega1B + commutator(Omega1B, eta1B)
   
-  for i in range(dim1B):
-    for j in range(dim1B):
-      for a in range(dim1B):
-        dOmega1B[i,j] += Omega1B[i,a] * eta1B[a,j] - eta1B[i,a] * Omega1B[a,j]
-  
-    
   # 1B - 2B
   for p in range(dim1B):
     for q in range(dim1B):
       for i in holes:
         for a in particles:
           dOmega1B[p,q] += (
-             Omega1B[i,a] * eta2B[idx2B[(a,p)], idx2B[(i,q)]]
-             - Omega1B[a,i] * eta2B[idx2B[(i,p)], idx2B[(a,q)]]
+            Omega1B[i,a] * eta2B[idx2B[(a,p)], idx2B[(i,q)]]
+            - Omega1B[a,i] * eta2B[idx2B[(i,p)], idx2B[(a,q)]]
             - eta1B[i,a] * Omega2B[idx2B[(a,p)], idx2B[(i,q)]]
             + eta1B[a,i] * Omega2B[idx2B[(i,p)], idx2B[(a,q)]]
         )
@@ -733,7 +727,7 @@ def flow_magnus2(Omega1B, Omega2B, eta1B, eta2B, user_data):
   # 2B - 2B - particle and hole ladders
   OmegaEta = dot(Omega2B, dot(occB_2B, eta2B))
 
-  dOmega2B += 0.5*(OmegaEta - transpose(OmegaEta))
+  dOmega2B = dOmega2B + 0.5*(OmegaEta - transpose(OmegaEta))
 
   # 2B - 2B - particle-hole chain
 
@@ -1055,8 +1049,8 @@ def derivative_magnus2(t, z, user_data):
   # calculate the right-hand side
   dOmega0B, dOmega1B, dOmega2B = calc_rhs2(Omega1B, Omega2B, eta1B, eta2B, user_data)
  
-  temp1B = dOmega1B + eta1B
-  temp2B = dOmega2B + eta2B
+  temp1B = dOmega1B
+  temp2B = dOmega2B
   
   dOmega1B = eta1B + Bernoulli(1) * dOmega1B
   dOmega2B = eta2B + Bernoulli(1) * dOmega2B
@@ -1081,7 +1075,7 @@ def derivative_magnus2(t, z, user_data):
     norm_two = np.linalg.norm(temp2B)
   
     i += 1
-    if norm_one < 1e-6 and norm_two < 1e-7: break
+    if norm_one < 1e-8 and norm_two < 1e-8: break
         
     if i > 20:
       print ("large iteration 1")
@@ -1114,17 +1108,18 @@ def update_operator(Omega1B, Omega2B, user_data):
     Gamma0    = user_data["Gamma0"]
     
     E, f, Gamma = calc_rhs(Omega1B, Omega2B, f0, Gamma0, user_data)
+    f2 = f
+    Gamma2 = Gamma
     f = f + f0
     Gamma = Gamma + Gamma0
     i = 2
-    f1 = f
-    Gamma1 = Gamma
+    
     while 1:
-        E, f1, Gamma1  = calc_rhs(Omega1B, Omega2B, f1, Gamma1, user_data)
-        f = f + f1/factorial(i)
-        Gamma = Gamma + Gamma1/factorial(i)
+        E, f2, Gamma2  = calc_rhs(Omega1B, Omega2B, f2, Gamma2, user_data)
+        f = f + f2/factorial(i)
+        Gamma = Gamma + Gamma2/factorial(i)
         
-        if np.linalg.norm(f1)<1e-7 and np.linalg.norm(Gamma1)<1e-6:
+        if np.linalg.norm(f2)<1e-8 and np.linalg.norm(Gamma2)<1e-8:
             break
         if i > 20:
             print ("large iteration 2")
@@ -1161,8 +1156,8 @@ def get_f_Gamma(Omega1B, Omega2B, user_data):
     Gamma = Gamma0 + two_body
     E = E0 + zero_body
     
-    f1 = f
-    Gamma1 = Gamma
+    f1 = one_body
+    Gamma1 = two_body
     while 1:
         
         E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f1, Gamma1, user_data)
@@ -1170,8 +1165,8 @@ def get_f_Gamma(Omega1B, Omega2B, user_data):
         Gamma = Gamma + Gamma1/factorial(i)
         E = E + E1/factorial(i)
         
-        #if np.linalg.norm(f1)/factorial(i)<1e-10 and np.linalg.norm(Gamma1)/factorial(i)<1e-10:
-        if E1 < 1e-7:
+        #if np.linalg.norm(f1)/factorial(i)<1e-8 and np.linalg.norm(Gamma1)/factorial(i)<1e-8:
+        if E1 < 1e-8:
             break
         if i > 20:
             print("large iteration 3")
@@ -1285,7 +1280,7 @@ def main():
 
   # integrate flow equations 
   solver = ode(derivative_magnus2,jac=None)
-  solver.set_integrator('vode', method='bdf', order=10, nsteps=1000)
+  solver.set_integrator('vode', method='bdf', order=5, nsteps=1000)
   solver.set_f_params(user_data)
   solver.set_initial_value(z0, 0.)
 
@@ -1313,26 +1308,23 @@ def main():
     norm_fod     = calc_fod_norm(f, user_data)
     norm_Gammaod = calc_Gammaod_norm(Gamma, user_data)
     
-    #norm_Omega1B  = calc_fod_norm(Omega1B, user_data)
-    #norm_Omega2B  = np.linalg.norm(Omega2B,1)-sum(np.diag(Omega2B))
-    #print (norm_Omega1B)
-    #print (norm_Omega2B)
-    
-
       
     print ("%8.5f %14.8f   %14.8f   %14.8f   %14.8f  %14.8f   %14.8f   %14.8f   %14.8f"%(
       solver.t, E , DE2, DE3, E+DE2+DE3, user_data["eta_norm"], norm_fod, norm_Gammaod, Omega0B))
     if abs(DE2/E) < 10e-8: break
 
   
-  #a = Omega2B - np.diag(np.diag(Omega2B))
-  #print (a.sum())
-    for i in range(64):
-      for j in range(i+1,64):
-        if Omega2B[i,j] == -Omega2B[j,i]:
-          continue
-        else:
-          print ("ERROR!!!!!")
+    #a = Omega2B - np.diag(np.diag(Omega2B))
+    #print (a.sum())
+    for i in range(dim2B):
+        if Omega2B[i,i] == 0:
+            continue
+        for j in range(i,dim2B):
+            if Omega2B[i,j] == -Omega2B[j,i]:
+                continue
+            else:
+                print ("ERROR!!!!!")
+
 
 #    solver.integrate(solver.t + ds)
 

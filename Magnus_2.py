@@ -1052,9 +1052,8 @@ def derivative_magnus2(t, z, user_data):
   
   i = 2
   
-  
   while 1:
-    temp1B, temp2B = calc_rhs2(Omega1B, Omega2B, temp1B, temp2B,  user_data)
+    temp1B, temp2B = calc_rhs2(Omega1B, Omega2B, temp1B, temp2B, user_data)
     if Bernoulli(i) == 0:
       i += 1
       continue
@@ -1109,7 +1108,6 @@ def test_energy(Omega1B, Omega2B, z0, user_data):
   
   ptr += dim1B*dim1B
   Gamma = reshape(z0[ptr:ptr+dim2B*dim2B], (dim2B, dim2B))
-  
   
   E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f, Gamma, user_data)
 
