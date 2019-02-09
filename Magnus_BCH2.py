@@ -1165,7 +1165,7 @@ def get_f_Gamma(Omega1B, Omega2B, user_data):
         E = E + E1/factorial[i]
         
         #if np.linalg.norm(f1)/factorial(i)<1e-8 and np.linalg.norm(Gamma1)/factorial(i)<1e-8:
-        if E1 < 1e-8:
+        if np.linalg.norm(f1) and np.linalg.norm(Gamma1) < 1e-8:
             break
         if i > 20:
             print("large iteration 3")
