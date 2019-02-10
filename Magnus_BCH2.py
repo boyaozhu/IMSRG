@@ -646,23 +646,7 @@ def flow_magnus2(Omega1B, Omega2B, eta1B, eta2B, user_data):
   occB_2B   = user_data["occB_2B"]
   occC_2B   = user_data["occC_2B"]
   occphA_2B = user_data["occphA_2B"]
-
-  ##################################
-  '''
-  # zero-body flow equation
-  dOmega0B = 0.0
-
-  for i in holes:
-    for a in particles:
-      dOmega0B += Omega1B[i,a] * eta1B[a,i] - Omega1B[a,i] * eta1B[i,a]
   
-  for i in holes:
-    for j in holes:
-      for a in particles:
-        for b in particles:
-          dOmega0B += 0.25*(Omega2B[idx2B[(i,j)], idx2B[(a,b)]] * eta2B[idx2B[(a,b)], idx2B[(i,j)]] \
-              - eta2B[idx2B[(i,j)], idx2B[(a,b)]] * Omega2B[idx2B[(a,b)], idx2B[(i,j)]])
-  '''
   ################################
   
   # one-body flow equation
@@ -754,24 +738,7 @@ def flow_magnus2(Omega1B, Omega2B, eta1B, eta2B, user_data):
 
   dOmega2B += OmegaEta
 
-  '''
-  for i in range(dim1B):
-    for j in range(dim1B):
-      for k in range(dim1B):
-        for l in range(dim1B):
-          for b in particles:
-            for a in holes:
-              dOmega2B += (
-               Omega2B[idx2B[(a,i)], idx2B[(b,k)]] * eta2B[idx2B[(b,j)], idx2B[(a,l)]]
-              - Omega2B[idx2B[(a,j)], idx2B[(b,k)]] * eta2B[idx2B[(b,i)], idx2B[(a,l)]]
-              - Omega2B[idx2B[(a,i)], idx2B[(b,l)]] * eta2B[idx2B[(b,j)], idx2B[(a,k)]]
-              + Omega2B[idx2B[(a,j)], idx2B[(b,l)]] * eta2B[idx2B[(b,i)], idx2B[(a,k)]]
-            )
-  '''
   return dOmega1B, dOmega2B
-
-
-
 
 
 #-----------------------------------------------------------------------------------
@@ -975,28 +942,6 @@ def Bernoulli(m):
     sum = sum/(m+1)
   return sum
 
-'''
-#define norm of matrix
-def calc_1B_norm(one_body, user_data):
-  dim1B = user_data["dim1B"]
-
-  norm=0.0
-  for p in range(dim1B):
-    for q in range(dim1B):
-      norm += one_body[p,q]**2
-
-  return np.sqrt(norm)
-
-def calc_2B_norm(two_body, user_data):
-  dim1B = user_data["dim1B"]
-  dim2B = dim1B * dim1B
-  norm = 0.0
-  for p in range(dim2B):
-    for q in range(dim2B):
-      norm += two_body[p,q]**2
-
-  return np.sqrt(norm)
-  '''
 
 
 #-----------------------------------------------------------------------------------
@@ -1037,16 +982,14 @@ def derivative_magnus2(t, z, user_data):
   Gamma0    = user_data["Gamma0"]
   bernoulli = user_data["bernoulli"]
   factorial = user_data["factorial"]
-  E         = user_data["E"]
-  f         = user_data["f"]
-  Gamma     = user_data["Gamma"]
+  #f         = user_data["f"]
+  #Gamma     = user_data["Gamma"]
 
   # extract operator pieces from solution vector
   Omega1B, Omega2B = get_operator_from_z(z, dim1B, dim2B)
 
   # calculate the generator
-  #eta1B, eta2B = update_operator(Omega1B, Omega2B, user_data)
-
+  E, f, Gamma = get_f_Gamma(Omega1B, Omega2B, user_data)
   eta1B, eta2B = calc_eta(f, Gamma, user_data)
 
   # calculate the right-hand side
@@ -1057,8 +1000,8 @@ def derivative_magnus2(t, z, user_data):
   
   dOmega1B = eta1B + bernoulli[1] * dOmega1B
   dOmega2B = eta2B + bernoulli[1] * dOmega2B
+  
   # share data
-  #user_data["dE"] = dE
   user_data["eta_norm"] = np.linalg.norm(eta1B, ord='fro')+np.linalg.norm(eta2B, ord='fro')
   
   i = 2
@@ -1072,14 +1015,12 @@ def derivative_magnus2(t, z, user_data):
     dOmega1B = dOmega1B + bernoulli[i] * temp1B / factorial[i]
     dOmega2B = dOmega2B + bernoulli[i] * temp2B / factorial[i]
     
-    #norm_one = np.linalg.norm(temp1B)
-    #norm_two = np.linalg.norm(temp2B)
+    norm_one = np.linalg.norm(temp1B)
+    norm_two = np.linalg.norm(temp2B)
   
     i += 1
-    #if norm_one < 1e-8 and norm_two < 1e-8: break
-        
-    if i > 10:
-      break
+    if norm_one < 1e-8 and norm_two < 1e-8: break
+    if i > 10: break
 
   dz = np.append(reshape(dOmega1B, -1), reshape(dOmega2B, -1))
   
@@ -1119,55 +1060,11 @@ def get_f_Gamma(Omega1B, Omega2B, user_data):
         Gamma = Gamma + Gamma1/factorial[i]
         E = E + E1/factorial[i]
         
-        #if np.linalg.norm(f1) < 1e-8 and np.linalg.norm(Gamma1) < 1e-8:
-        #   break
-        if i > 10:
-            break
+        if np.linalg.norm(f1) < 1e-8 and np.linalg.norm(Gamma1) < 1e-8: break
+        if i > 10: break
         i += 1
     
     return E, f, Gamma
-
-'''
-def test_energy(Omega1B, Omega2B, z0, user_data):
-    
-    dim1B     = user_data["dim1B"]
-    dim2B     = dim1B * dim1B
-    holes     = user_data["holes"]
-    particles = user_data["particles"]
-    bas2B     = user_data["bas2B"]
-    idx2B     = user_data["idx2B"]
-    basph2B   = user_data["basph2B"]
-    idxph2B   = user_data["idxph2B"]
-    occB_2B   = user_data["occB_2B"]
-    occC_2B   = user_data["occC_2B"]
-    occphA_2B = user_data["occphA_2B"]
-    calc_rhs  = user_data["calc_rhs"]
-    factorial = user_data["factorial"]
-    E0        = user_data["E0"]
-    f0        = user_data["f0"]
-    Gamma0    = user_data["Gamma0"]
-    
-    
-    E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f0, Gamma0, user_data)
-                        
-    E = E0 + E1
-    f = f0 + f1
-    Gamma = Gamma0 + Gamma1
-                                    
-    i = 2
-    while 1:
-        E1, f1, Gamma1 = calc_rhs(Omega1B, Omega2B, f1, Gamma1, user_data)
-                                                
-                                                
-        E = E + E1/factorial[i]
-            #if np.linalg.norm(f1)<1e-8 and np.linalg.norm(Gamma1)<1e-8:
-            #break
-        if i > 10:
-            break
-        i += 1
-                                                                            
-    return E
-  '''
 
 
 #------------------------------------------------------------------------------
@@ -1243,13 +1140,10 @@ def main():
   
   }
   
-  
-  bernoulli = []
-  for i in range(15):
-      bernoulli.append(Bernoulli(i))
-  
   factorial = []
-  for i in range(15):
+  bernoulli = []
+  for i in range(11):
+      bernoulli.append(Bernoulli(i))
       factorial.append(Factorial(i))
   
   # set up initial Hamiltonian
@@ -1265,9 +1159,9 @@ def main():
   # set up initial Omega (Magnus)
   Omega1B = np.zeros_like(f0)
   Omega2B = np.zeros_like(Gamma0)
-  user_data["f"]     = f0
-  user_data["Gamma"] = Gamma0
-  user_data["E"]     = E0
+#user_data["f"]     = f0
+#user_data["Gamma"] = Gamma0
+#user_data["E"]     = E0
 
   
   # reshape Hamiltonian into a linear array (initial ODE vector)
@@ -1301,9 +1195,9 @@ def main():
     Omega1B, Omega2B = get_operator_from_z(zs, dim1B, dim2B)
     
     E, f, Gamma = get_f_Gamma(Omega1B, Omega2B, user_data)
-    user_data["E"]     = E
-    user_data["f"]     = f
-    user_data["Gamma"] = Gamma
+    #user_data["E"]     = E
+    #user_data["f"]     = f
+    #user_data["Gamma"] = Gamma
     
     DE2 = calc_mbpt2(f, Gamma, user_data)
     DE3 = calc_mbpt3(f, Gamma, user_data)
@@ -1318,8 +1212,6 @@ def main():
 
   end = time.time()
 
-#a = test_energy(Omega1B, Omega2B, z0, user_data)
-#print ("%11.8f"%(a))
   print (end-start)
 #    solver.integrate(solver.t + ds)
 
