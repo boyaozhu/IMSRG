@@ -1037,17 +1037,18 @@ def derivative_magnus2(t, z, user_data):
   Gamma0    = user_data["Gamma0"]
   bernoulli = user_data["bernoulli"]
   factorial = user_data["factorial"]
+  E         = user_data["E"]
+  f         = user_data["f"]
+  Gamma     = user_data["Gamma"]
 
   # extract operator pieces from solution vector
   Omega1B, Omega2B = get_operator_from_z(z, dim1B, dim2B)
 
   # calculate the generator
   #eta1B, eta2B = update_operator(Omega1B, Omega2B, user_data)
-  E, f, Gamma = get_f_Gamma(Omega1B, Omega2B, user_data)
+
   eta1B, eta2B = calc_eta(f, Gamma, user_data)
-  user_data["E"]     = E
-  user_data["f"]     = f
-  user_data["Gamma"] = Gamma
+
   # calculate the right-hand side
   dOmega1B, dOmega2B = calc_rhs2(Omega1B, Omega2B, eta1B, eta2B, user_data)
  
@@ -1126,7 +1127,7 @@ def get_f_Gamma(Omega1B, Omega2B, user_data):
     
     return E, f, Gamma
 
-
+'''
 def test_energy(Omega1B, Omega2B, z0, user_data):
     
     dim1B     = user_data["dim1B"]
@@ -1166,7 +1167,7 @@ def test_energy(Omega1B, Omega2B, z0, user_data):
         i += 1
                                                                             
     return E
-
+  '''
 
 
 #------------------------------------------------------------------------------
@@ -1264,7 +1265,9 @@ def main():
   # set up initial Omega (Magnus)
   Omega1B = np.zeros_like(f0)
   Omega2B = np.zeros_like(Gamma0)
-  
+  user_data["f"]     = f0
+  user_data["Gamma"] = Gamma0
+  user_data["E"]     = E0
 
   
   # reshape Hamiltonian into a linear array (initial ODE vector)
@@ -1297,10 +1300,11 @@ def main():
     dim2B = dim1B*dim1B
     Omega1B, Omega2B = get_operator_from_z(zs, dim1B, dim2B)
     
-    #E, f, Gamma = get_f_Gamma(Omega1B, Omega2B, user_data)
-    E = user_data["E"]
-    f = user_data["f"]
-    Gamma = user_data["Gamma"]
+    E, f, Gamma = get_f_Gamma(Omega1B, Omega2B, user_data)
+    user_data["E"]     = E
+    user_data["f"]     = f
+    user_data["Gamma"] = Gamma
+    
     DE2 = calc_mbpt2(f, Gamma, user_data)
     DE3 = calc_mbpt3(f, Gamma, user_data)
 
@@ -1314,8 +1318,8 @@ def main():
 
   end = time.time()
 
-  a = test_energy(Omega1B, Omega2B, z0, user_data)
-  print ("%11.8f"%(a))
+#a = test_energy(Omega1B, Omega2B, z0, user_data)
+#print ("%11.8f"%(a))
   print (end-start)
 #    solver.integrate(solver.t + ds)
 
