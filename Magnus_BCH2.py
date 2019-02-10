@@ -1020,7 +1020,7 @@ def derivative_magnus2(t, z, user_data):
   
     i += 1
     if norm_one < 1e-8 and norm_two < 1e-8: break
-    if i > 10: break
+    if i > 20: break
 
   dz = np.append(reshape(dOmega1B, -1), reshape(dOmega2B, -1))
   
@@ -1061,7 +1061,7 @@ def get_f_Gamma(Omega1B, Omega2B, user_data):
         E = E + E1/factorial[i]
         
         if np.linalg.norm(f1) < 1e-8 and np.linalg.norm(Gamma1) < 1e-8: break
-        if i > 10: break
+        if i > 20: break
         i += 1
     
     return E, f, Gamma
@@ -1142,7 +1142,7 @@ def main():
   
   factorial = []
   bernoulli = []
-  for i in range(11):
+  for i in range(22):
       bernoulli.append(Bernoulli(i))
       factorial.append(Factorial(i))
   
