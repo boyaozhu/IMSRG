@@ -1136,9 +1136,9 @@ def De_normal(E, f, Gamma, user_data):
 
 # grab delta and g from the command line
 delta      = 1.
-g          = 0.5
-f          = 0.1
-h          = 0.15
+g          = 0.
+f          = 0.
+h          = 0.
 
 nparticles  = 4
 
@@ -1202,6 +1202,34 @@ user_data  = {
 
 # set up initial Hamiltonian
 H1B, H2B = pairing_hamiltonian(delta, g, f, h, user_data)
+/Users/boyaozhu/Documents/GitHub/IMSRG-Magnus
+
+
+g = 0.1
+H1B, H2B = pairing_hamiltonian(delta, g, f, h, user_data)
+
+
+g = 0
+f = 0.1
+H1B, H2B = pairing_hamiltonian(delta, g, f, h, user_data)
+
+
+f = 0
+h = 0.1
+H1B, H2B = pairing_hamiltonian(delta, g, f, h, user_data)
+
+h = 0
+g = 0.1
+f = 0.1
+H1B, H2B = pairing_hamiltonian(delta, g, f, h, user_data)
+im = plt.imshow(H2B,cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
+plt.colorbar(im)
+plt.show()
+
+
+
+exit(0)
+############################################################################
 
 u,s,v = np.linalg.svd(H2B)
 print (s)
