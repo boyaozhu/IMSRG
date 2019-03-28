@@ -1113,7 +1113,7 @@ def De_normal(E, f, Gamma, user_data):
     bas2B     = user_data["bas2B"]
     holes     = user_data["holes"]
     
-    H1B = f
+    H1B = f.copy()
     for i in bas1B:
         for j in bas1B:
             for h in holes:
@@ -1124,9 +1124,10 @@ def De_normal(E, f, Gamma, user_data):
         H0B -= H1B[i,i]
     for i in holes:
         for k in holes:
-            H0B -= 0.25 * Gamma[idx2B[(i,i)],idx2B[(k,k)]]
+            #H0B -= 0.25*Gamma[idx2B[(i,k)],idx2B[(i,k)]]
+            H0B += 0.5*Gamma[idx2B[(i,k)],idx2B[(k,i)]]
 
-    H2B = Gamma
+    H2B = Gamma.copy()
     return H0B, H1B, H2B
 
 
@@ -1136,7 +1137,7 @@ def De_normal(E, f, Gamma, user_data):
 
 # grab delta and g from the command line
 delta      = 1.
-g          = 0.
+g          = 0.5
 f          = 0.
 h          = 0.
 
@@ -1203,17 +1204,6 @@ user_data  = {
 # set up initial Hamiltonian
 H1B, H2B = pairing_hamiltonian(delta, g, f, h, user_data)
 
-
-import xlsxwriter
-workbook = xlsxwriter.Workbook("Hamiltonian2.xlsx")
-worksheet = workbook.add_worksheet()    
-row = 0
-for col, data in enumerate(H):
-    worksheet.write_column(row, col, data)
-workbook.close()
-
-
-#*******************************************************************************************
 Hamilton0 = Hamiltonian(H1B, H2B, user_data)
 im = plt.imshow(Hamilton0,cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
 plt.colorbar(im)
@@ -1223,6 +1213,14 @@ plt.show()
 
 
 E, f, Gamma = normal_order(H1B, H2B, user_data)
+
+H0Bm,H1Bm,H2Bm = De_normal(E, f, Gamma, user_data)
+print (H0Bm)
+print (H1Bm)
+print (H2Bm)
+
+print (np.linalg.norm(H1B-H1Bm))
+print (np.linalg.norm(H2B-H2Bm))
 
 # reshape Hamiltonian into a linear array (initial ODE vector)
 y0   = np.append([E], np.append(reshape(f, -1), reshape(Gamma, -1)))
@@ -1236,7 +1234,7 @@ solver.set_initial_value(y0, 0.)
 sfinal = 50
 ds = 0.1
 
-print("%-8s   %-10s   %-10s   %-10s   %-10s   %-10s   %-10s   %-10s   %-10s"%(
+print(" %-8s  %-10s    %-10s    %-10s    %-10s    %-10s   %-10s  %-10s %-10s"%(
         "s", "E" , "DE(2)", "DE(3)", "E+DE", "dE/ds", 
         "||eta||", "||fod||", "||Gammaod||"))
 print("-" * 114)
@@ -1262,14 +1260,16 @@ while solver.successful() and solver.t < sfinal:
     
 H0B,H1B,H2B = De_normal(E, f, Gamma, user_data)
 Hamilton = Hamiltonian(H1B, H2B, user_data)
+
+'''
+import xlsxwriter
 workbook = xlsxwriter.Workbook("Hamiltonian_end.xlsx")
 worksheet = workbook.add_worksheet()
-
 row = 0
 for col, data in enumerate(Hamilton):
     worksheet.write_column(row, col, data)
 workbook.close()
-
+'''
 im = plt.imshow(Hamilton, cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
 plt.colorbar(im)
 plt.savefig("Hamilton1")
@@ -1278,6 +1278,9 @@ plt.show()
 from numpy import linalg as LA
 w, v = LA.eig(np.array(Hamilton))
 print (w)
+print("$"*100)
+x,z = LA.eig(np.array(Hamilton0))
+print (x)
 
 print (H0B)
 print (H0B + w[0])
