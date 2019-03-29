@@ -1131,6 +1131,29 @@ def De_normal(E, f, Gamma, user_data):
     return H0B, H1B, H2B
 
 
+def derivative(y, t, dim):
+    
+    # reshape the solution vector into a dim x dim matrix
+    H = reshape(y, (dim, dim))
+    
+    # extract diagonal Hamiltonian...
+    Hd  = diag(diag(H))
+    
+    # ... and construct off-diagonal the Hamiltonian
+    Hod = H-Hd
+    
+    # calculate the generator
+    eta = commutator(Hd, Hod)
+    
+    # dH is the derivative in matrix form
+    dH  = commutator(eta, H)
+    
+    # convert dH into a linear array for the ODE solver
+    dy = reshape(dH, -1)
+    
+    return dy
+
+
 #------------------------------------------------------------------------------
 # Main program
 #------------------------------------------------------------------------------
@@ -1138,8 +1161,8 @@ def De_normal(E, f, Gamma, user_data):
 # grab delta and g from the command line
 delta      = 1.
 g          = 0.5
-f          = 0.
-h          = 0.
+f          = 0.2
+h          = 0.8
 
 nparticles  = 4
 
@@ -1211,7 +1234,23 @@ plt.savefig("Hamilton")
 plt.show()
 #*******************************************************************************************
 
+eigenvalues = eigvalsh(Hamilton0)
+y0 = reshape(Hamilton0, -1)
+r = [x for x in range(10,700,20)]
+flowparams = array([0., 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5]+r)
+l = len(flowparams)
+dim = 36
+ys = odeint(derivative, y0, flowparams, args=(dim,))
+Hs = reshape(ys, (-1,dim,dim))
 
+for i in range(l):
+    im = plt.imshow(Hs[i], cmap=plt.get_cmap('RdBu_r'),interpolation='nearest', vmin=-g,vmax=g)
+    plt.colorbar(im)
+    plt.show()
+
+
+exit(0)
+#*******************************************************************************************
 E, f, Gamma = normal_order(H1B, H2B, user_data)
 
 H0Bm,H1Bm,H2Bm = De_normal(E, f, Gamma, user_data)
