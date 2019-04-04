@@ -1158,7 +1158,7 @@ def imageshow(object):
     im = plt.imshow(object,cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
     plt.colorbar(im)
     plt.show()
-    plt.savefig("H.pdf")
+
 #------------------------------------------------------------------------------
 # Main program
 #------------------------------------------------------------------------------
@@ -1167,7 +1167,7 @@ def imageshow(object):
 delta      = 1.
 g          = 0.5
 f          = 0.05
-h          = 0.02
+h          = 0.01
 
 nparticles  = 4
 
@@ -1231,10 +1231,7 @@ user_data  = {
 
 # set up initial Hamiltonian
 H1B, H2B = pairing_hamiltonian(delta, g, f, h, user_data)
-im = plt.imshow(H2B,cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
-plt.colorbar(im)
-plt.show()
-plt.savefig("Gamma.pdf")
+
 
 Hamilton0 = Hamiltonian(H1B, H2B, user_data)
 '''
@@ -1264,13 +1261,7 @@ for i in range(l):
 '''
 #*******************************************************************************************
 E, f, Gamma = normal_order(H1B, H2B, user_data)
-im = plt.imshow(f,cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
-plt.colorbar(im)
-plt.show()
-plt.savefig("f.pdf")
 
-u,s,v = np.linalg.svd(Gamma)
-print (s[0:5])
 # reshape Hamiltonian into a linear array (initial ODE vector)
 y0   = np.append([E], np.append(reshape(f, -1), reshape(Gamma, -1)))
 
@@ -1288,10 +1279,10 @@ print(" %-8s  %-10s    %-10s    %-10s    %-10s    %-10s   %-10s  %-10s %-10s"%(
         "||eta||", "||fod||", "||Gammaod||"))
 print("-" * 114)
 
-first = []
-second= []
-third = []
-fourth= []
+obj = {}
+for i in range(25):
+    obj[str(i)] = []
+time = []
 while solver.successful() and solver.t < sfinal:
     ys = solver.integrate(sfinal, step=True)
         
@@ -1304,41 +1295,30 @@ while solver.successful() and solver.t < sfinal:
     norm_fod     = calc_fod_norm(f, user_data)
     norm_Gammaod = calc_Gammaod_norm(Gamma, user_data)
     
-    '''
     H0B, H1B, H2B = De_normal(E, f, Gamma, user_data)
     Hamilton = Hamiltonian(H1B, H2B, user_data)
-    first.append(Hamilton[0,0])
-    second.append(Hamilton[1,1])
-    third.append(Hamilton[2,2])
-    fourth.append(Hamilton[3,3])
-    '''
+    
+    for i in range(25):
+        obj[str(i)].append(Hamilton[i,i])
+    time.append(solver.t)
+    
     print("%8.5f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f"%(
         solver.t, E , DE2, DE3, E+DE2+DE3, user_data["dE"], user_data["eta_norm"], norm_fod, norm_Gammaod))
-    if abs(DE2/E)<1e-8: break
-u,s,v = np.linalg.svd(Gamma)
-print (s)
+    if abs(DE2/E)<10e-8: break
 
 
-'''
-plt.plot(first)
-plt.plot(second)
-plt.plot(third)
-plt.plot(fourth)
+plt.figure(figsize=(1.8*5, 2.0*5))
+plt.subplots_adjust(bottom=.05, left=.05, right=.99, top=.95, hspace=.4)
+
+for i in range(25):
+    plt.subplot(5,5,i+1)
+    plt.plot(time,obj[str(i)])
+    plt.title(str(i+1)+"th Eigenvalues", size = 8)
 plt.show()
-'''
+
 
 H0B,H1B,H2B = De_normal(E, f, Gamma, user_data)
 Hamilton = Hamiltonian(H1B, H2B, user_data)
-
-im = plt.imshow(H2B,cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
-plt.colorbar(im)
-plt.show()
-plt.savefig("Gammaend.pdf")
-im = plt.imshow(f,cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
-plt.colorbar(im)
-plt.show()
-plt.savefig("fend.pdf")
-
 '''
 import xlsxwriter
 workbook = xlsxwriter.Workbook("Hamiltonian_end.xlsx")
@@ -1359,7 +1339,4 @@ from numpy import linalg as LA
 w, v = LA.eig(np.array(Hamilton0))
 print (w)
 
-#print (H0B)
-#print (H0B + w[0])
-#print (Hamilton[0,0])
 
