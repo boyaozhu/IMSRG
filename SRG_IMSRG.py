@@ -1235,31 +1235,28 @@ H1B, H2B = pairing_hamiltonian(delta, g, f, h, user_data)
 
 Hamilton0 = Hamiltonian(H1B, H2B, user_data)
 '''
-im = plt.imshow(Hamilton0,cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
-plt.colorbar(im)
-plt.savefig("Hamilton")
-plt.show()
-
 #*******************************************************************************************
 
-eigenvalues = eigvalsh(Hamilton0)
+#eigenvalues = eigvalsh(Hamilton0)
 y0 = reshape(Hamilton0, -1)
-r = [x for x in range(10,700,20)]
-flowparams = array([0., 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5]+r)
+r = [x for x in range(10,700,60)]
+flowparams = array([0., 0.001, 0.005, 0.01,  0.05, 0.1, 0.2, 0.5]+r)
 l = len(flowparams)
-dim = 36
+dim = len(states_0)
 ys = odeint(derivative, y0, flowparams, args=(dim,))
 Hs = reshape(ys, (-1,dim,dim))
 
-for i in range(l):
-    if i >= l-2:
-        print (Hs[i])
-        break
-    #im = plt.imshow(Hs[i], cmap=plt.get_cmap('RdBu_r'),interpolation='nearest', vmin=-g,vmax=g)
-    #plt.colorbar(im)
-    #plt.show()
-'''
+plt.figure(figsize=(2.5*4, 2.5*5))
+plt.subplots_adjust(bottom=.05, left=.05, right=.99, top=.95, hspace=.4)
+
+for i in range(20):
+    plt.subplot(4,5,i+1)
+    im = plt.imshow(Hs[i],cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
+    plt.title("s = "+str(flowparams[i]), size = 6)
+plt.show()
+
 #*******************************************************************************************
+'''
 E, f, Gamma = normal_order(H1B, H2B, user_data)
 
 # reshape Hamiltonian into a linear array (initial ODE vector)
@@ -1274,13 +1271,13 @@ solver.set_initial_value(y0, 0.)
 sfinal = 50
 ds = 0.1
 
-print(" %-8s  %-10s    %-10s    %-10s    %-10s    %-10s   %-10s  %-10s %-10s"%(
+print(" %-8s  %-10s    %-10s    %-10s    %-10s    %-10s   %-10s  %-10s   %-10s"%(
         "s", "E" , "DE(2)", "DE(3)", "E+DE", "dE/ds", 
         "||eta||", "||fod||", "||Gammaod||"))
-print("-" * 114)
+print("-" * 118)
 
 obj = {}
-for i in range(25):
+for i in range(36):
     obj[str(i)] = []
 time = []
 while solver.successful() and solver.t < sfinal:
@@ -1298,27 +1295,30 @@ while solver.successful() and solver.t < sfinal:
     H0B, H1B, H2B = De_normal(E, f, Gamma, user_data)
     Hamilton = Hamiltonian(H1B, H2B, user_data)
     
-    for i in range(25):
+    for i in range(36):
         obj[str(i)].append(Hamilton[i,i])
     time.append(solver.t)
-    
+
     print("%8.5f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f"%(
-        solver.t, E , DE2, DE3, E+DE2+DE3, user_data["dE"], user_data["eta_norm"], norm_fod, norm_Gammaod))
+       solver.t, E , DE2, DE3, E+DE2+DE3, user_data["dE"], user_data["eta_norm"], norm_fod, norm_Gammaod))
     if abs(DE2/E)<10e-8: break
 
 
-plt.figure(figsize=(1.8*5, 2.0*5))
+plt.figure(figsize=(1.8*6, 2.0*6))
 plt.subplots_adjust(bottom=.05, left=.05, right=.99, top=.95, hspace=.4)
 
-for i in range(25):
-    plt.subplot(5,5,i+1)
+for i in range(36):
+    plt.subplot(6,6,i+1)
     plt.plot(time,obj[str(i)])
-    plt.title(str(i+1)+"th Eigenvalues", size = 8)
+    plt.title(str(i+1)+"th Eigenvalue", size = 6)
 plt.show()
 
 
 H0B,H1B,H2B = De_normal(E, f, Gamma, user_data)
 Hamilton = Hamiltonian(H1B, H2B, user_data)
+for i in range(36):
+    print Hamilton[i,i]
+
 '''
 import xlsxwriter
 workbook = xlsxwriter.Workbook("Hamiltonian_end.xlsx")
@@ -1328,15 +1328,8 @@ for col, data in enumerate(Hamilton):
     worksheet.write_column(row, col, data)
 workbook.close()
 '''
-'''
-im = plt.imshow(Hamilton, cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
-plt.colorbar(im)
-plt.savefig("Hamilton1")
-plt.show()
-'''
 
-from numpy import linalg as LA
-w, v = LA.eig(np.array(Hamilton0))
-print (w)
+ew = eigvalsh(Hamilton)
+print (ew)
 
 
