@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:/Users/boyaozhu/Documents/GitHub/IMSRG-Magnus/SRG_IMSRG.py
+# In[ ]:
 
 
 #!/usr/bin/env python
@@ -96,25 +96,25 @@ def construct_index_2B(bas2B):
 #-----------------------------------------------------------------------------------
 # transform matrices to particle-hole representation
 #-----------------------------------------------------------------------------------
-def ph_transform_2B(Gamma, bas2B, idx2B, basph2B, idxph2B):
+def ph_transform_2B(H2B, bas2B, idx2B, basph2B, idxph2B):
     dim = len(basph2B)
-    Gamma_ph = np.zeros((dim, dim))
+    H2B_ph = np.zeros((dim, dim))
 
     for i1, (a,b) in enumerate(basph2B):
         for i2, (c, d) in enumerate(basph2B):
-            Gamma_ph[i1, i2] -= Gamma[idx2B[(a,d)], idx2B[(c,b)]]
+            H2B_ph[i1, i2] -= H2B[idx2B[(a,d)], idx2B[(c,b)]]
 
-    return Gamma_ph
+    return H2B_ph
 
-def inverse_ph_transform_2B(Gamma_ph, bas2B, idx2B, basph2B, idxph2B):
+def inverse_ph_transform_2B(H2B_ph, bas2B, idx2B, basph2B, idxph2B):
     dim = len(bas2B)
-    Gamma = np.zeros((dim, dim))
+    H2B = np.zeros((dim, dim))
 
     for i1, (a,b) in enumerate(bas2B):
         for i2, (c, d) in enumerate(bas2B):
-            Gamma[i1, i2] -= Gamma_ph[idxph2B[(a,d)], idxph2B[(c,b)]]
+            H2B[i1, i2] -= H2B_ph[idxph2B[(a,d)], idxph2B[(c,b)]]
     
-    return Gamma
+    return H2B
 
 #-----------------------------------------------------------------------------------
 # commutator of matrices
@@ -125,18 +125,18 @@ def commutator(a,b):
 #-----------------------------------------------------------------------------------
 # norms of off-diagonal Hamiltonian pieces
 #-----------------------------------------------------------------------------------
-def calc_fod_norm(f, user_data):
+def calc_fod_norm(H1B, user_data):
     particles = user_data["particles"]
     holes     = user_data["holes"]
     
     norm = 0.0
     for a in particles:
         for i in holes:
-            norm += f[a,i]**2 + f[i,a]**2
+            norm += H1B[a,i]**2 + H1B[i,a]**2
 
     return np.sqrt(norm)
 
-def calc_Gammaod_norm(Gamma, user_data):
+def calc_Gammaod_norm(H2B, user_data):
     particles = user_data["particles"]
     holes     = user_data["holes"]
     idx2B     = user_data["idx2B"]
@@ -146,7 +146,7 @@ def calc_Gammaod_norm(Gamma, user_data):
         for b in particles:
             for i in holes:
                 for j in holes:
-                    norm += Gamma[idx2B[(a,b)],idx2B[(i,j)]]**2 + Gamma[idx2B[(i,j)],idx2B[(a,b)]]**2
+                    norm += H2B[idx2B[(a,b)],idx2B[(i,j)]]**2 + H2B[idx2B[(i,j)],idx2B[(a,b)]]**2
 
     return np.sqrt(norm)
 
@@ -196,14 +196,14 @@ def construct_occupationC_2B(bas2B, occ1B):
 #-----------------------------------------------------------------------------------
 # generators
 #-----------------------------------------------------------------------------------
-def eta_brillouin(f, Gamma, user_data):
+def eta_brillouin(H1B, H2B, user_data):
     dim1B     = user_data["dim1B"]
     particles = user_data["particles"]
     holes     = user_data["holes"]
     idx2B     = user_data["idx2B"]
 
     # one-body part of the generator
-    eta1B  = np.zeros_like(f)
+    eta1B  = np.zeros_like(H1B)
 
     for a in particles:
         for i in holes:
@@ -212,20 +212,20 @@ def eta_brillouin(f, Gamma, user_data):
             eta1B[i, a] = -f[a,i]
 
     # two-body part of the generator
-    eta2B = np.zeros_like(Gamma)
+    eta2B = np.zeros_like(H2B)
 
     for a in particles:
         for b in particles:
             for i in holes:
                 for j in holes:
-                    val = Gamma[idx2B[(a,b)], idx2B[(i,j)]]
+                    val = H2B[idx2B[(a,b)], idx2B[(i,j)]]
 
                     eta2B[idx2B[(a,b)],idx2B[(i,j)]] = val
                     eta2B[idx2B[(i,j)],idx2B[(a,b)]] = -val
 
     return eta1B, eta2B
 
-def eta_imtime(f, Gamma, user_data):
+def eta_imtime(H1B, H2B, user_data):
     dim1B     = user_data["dim1B"]
     particles = user_data["particles"]
     holes     = user_data["holes"]
@@ -236,29 +236,29 @@ def eta_imtime(f, Gamma, user_data):
 
     for a in particles:
         for i in holes:
-            dE = f[a,a] - f[i,i] + Gamma[idx2B[(a,i)], idx2B[(a,i)]]
-            val = np.sign(dE)*f[a,i]
+            dE = H1B[a,a] - H1B[i,i] + H2B[idx2B[(a,i)], idx2B[(a,i)]]
+            val = np.sign(dE)*H1B[a,i]
             eta1B[a, i] =  val
             eta1B[i, a] = -val 
 
     # two-body part of the generator
-    eta2B = np.zeros_like(Gamma)
+    eta2B = np.zeros_like(H2B)
 
     for a in particles:
         for b in particles:
             for i in holes:
                 for j in holes:
                     dE = ( 
-                      f[a,a] + f[b,b] - f[i,i] - f[j,j]  
-                      + Gamma[idx2B[(a,b)],idx2B[(a,b)]] 
-                      + Gamma[idx2B[(i,j)],idx2B[(i,j)]]
-                      - Gamma[idx2B[(a,i)],idx2B[(a,i)]] 
-                      - Gamma[idx2B[(a,j)],idx2B[(a,j)]] 
-                      - Gamma[idx2B[(b,i)],idx2B[(b,i)]] 
-                      - Gamma[idx2B[(b,j)],idx2B[(b,j)]] 
+                      H1B[a,a] + H1B[b,b] - H1B[i,i] - H1B[j,j]
+                      + H2B[idx2B[(a,b)],idx2B[(a,b)]]
+                      + H2B[idx2B[(i,j)],idx2B[(i,j)]]
+                      - H2B[idx2B[(a,i)],idx2B[(a,i)]]
+                      - H2B[idx2B[(a,j)],idx2B[(a,j)]]
+                      - H2B[idx2B[(b,i)],idx2B[(b,i)]]
+                      - H2B[idx2B[(b,j)],idx2B[(b,j)]]
                     )
 
-                    val = np.sign(dE)*Gamma[idx2B[(a,b)], idx2B[(i,j)]]
+                    val = np.sign(dE)*H2B[idx2B[(a,b)], idx2B[(i,j)]]
 
                     eta2B[idx2B[(a,b)],idx2B[(i,j)]] = val
                     eta2B[idx2B[(i,j)],idx2B[(a,b)]] = -val
@@ -266,41 +266,41 @@ def eta_imtime(f, Gamma, user_data):
     return eta1B, eta2B
 
 
-def eta_white(f, Gamma, user_data):
+def eta_white(H1B, H2B, user_data):
     dim1B     = user_data["dim1B"]
     particles = user_data["particles"]
     holes     = user_data["holes"]
     idx2B     = user_data["idx2B"]
 
     # one-body part of the generator
-    eta1B  = np.zeros_like(f)
+    eta1B  = np.zeros_like(H1B)
 
     for a in particles:
         for i in holes:
-            denom = f[a,a] - f[i,i] + Gamma[idx2B[(a,i)], idx2B[(a,i)]]
-            val = f[a,i]/denom
+            denom = H1B[a,a] - H1B[i,i] + H2B[idx2B[(a,i)], idx2B[(a,i)]]
+            val = H1B[a,i]/denom
             eta1B[a, i] =  val
             eta1B[i, a] = -val 
 
     # two-body part of the generator
-    eta2B = np.zeros_like(Gamma)
+    eta2B = np.zeros_like(H2B)
 
     for a in particles:
         for b in particles:
             for i in holes:
                 for j in holes:
                     denom = ( 
-                      f[a,a] + f[b,b] - f[i,i] - f[j,j]  
-                      + Gamma[idx2B[(a,b)],idx2B[(a,b)]] 
-                      + Gamma[idx2B[(i,j)],idx2B[(i,j)]]
-                      - Gamma[idx2B[(a,i)],idx2B[(a,i)]] 
-                      - Gamma[idx2B[(a,j)],idx2B[(a,j)]] 
-                      - Gamma[idx2B[(b,i)],idx2B[(b,i)]] 
-                      - Gamma[idx2B[(b,j)],idx2B[(b,j)]] 
+                      H1B[a,a] + H1B[b,b] - H1B[i,i] - H1B[j,j]
+                      + H2B[idx2B[(a,b)],idx2B[(a,b)]]
+                      + H2B[idx2B[(i,j)],idx2B[(i,j)]]
+                      - H2B[idx2B[(a,i)],idx2B[(a,i)]]
+                      - H2B[idx2B[(a,j)],idx2B[(a,j)]]
+                      - H2B[idx2B[(b,i)],idx2B[(b,i)]]
+                      - H2B[idx2B[(b,j)],idx2B[(b,j)]]
                     )
 
 #                    if abs(denom) < 1.0e-10: print "%i %i %i %i\n"%(a,b,i,j)
-                    val = Gamma[idx2B[(a,b)], idx2B[(i,j)]] / denom
+                    val = H2B[idx2B[(a,b)], idx2B[(i,j)]] / denom
 
                     eta2B[idx2B[(a,b)],idx2B[(i,j)]] = val
                     eta2B[idx2B[(i,j)],idx2B[(a,b)]] = -val
@@ -308,19 +308,19 @@ def eta_white(f, Gamma, user_data):
     return eta1B, eta2B
 
 
-def eta_white_mp(f, Gamma, user_data):
+def eta_white_mp(H1B, H2B, user_data):
     dim1B     = user_data["dim1B"]
     particles = user_data["particles"]
     holes     = user_data["holes"]
     idx2B     = user_data["idx2B"]
 
     # one-body part of the generator
-    eta1B  = np.zeros_like(f)
+    eta1B  = np.zeros_like(H1B)
 
     for a in particles:
         for i in holes:
-            denom = f[a,a] - f[i,i]
-            val = f[a,i]/denom
+            denom = H1B[a,a] - H1B[i,i]
+            val = H1B[a,i]/denom
             eta1B[a, i] =  val
             eta1B[i, a] = -val 
 
@@ -332,50 +332,50 @@ def eta_white_mp(f, Gamma, user_data):
             for i in holes:
                 for j in holes:
                     denom = ( 
-                      f[a,a] + f[b,b] - f[i,i] - f[j,j]  
+                      H1B[a,a] + H1B[b,b] - H1B[i,i] - H1B[j,j]
                     )
 
-                    val = Gamma[idx2B[(a,b)], idx2B[(i,j)]] / denom
+                    val = H2B[idx2B[(a,b)], idx2B[(i,j)]] / denom
 
                     eta2B[idx2B[(a,b)],idx2B[(i,j)]] = val
                     eta2B[idx2B[(i,j)],idx2B[(a,b)]] = -val
 
     return eta1B, eta2B
 
-def eta_white_atan(f, Gamma, user_data):
+def eta_white_atan(H1B, H2B, user_data):
     dim1B     = user_data["dim1B"]
     particles = user_data["particles"]
     holes     = user_data["holes"]
     idx2B     = user_data["idx2B"]
 
     # one-body part of the generator
-    eta1B  = np.zeros_like(f)
+    eta1B  = np.zeros_like(H1B)
 
     for a in particles:
         for i in holes:
-            denom = f[a,a] - f[i,i] + Gamma[idx2B[(a,i)], idx2B[(a,i)]]
-            val = 0.5 * np.arctan(2 * f[a,i]/denom)
+            denom = H1B[a,a] - H1B[i,i] + H2B[idx2B[(a,i)], idx2B[(a,i)]]
+            val = 0.5 * np.arctan(2 * H1B[a,i]/denom)
             eta1B[a, i] =  val
             eta1B[i, a] = -val 
 
     # two-body part of the generator
-    eta2B = np.zeros_like(Gamma)
+    eta2B = np.zeros_like(H2B)
 
     for a in particles:
         for b in particles:
             for i in holes:
                 for j in holes:
                     denom = ( 
-                      f[a,a] + f[b,b] - f[i,i] - f[j,j] 
-                      + Gamma[idx2B[(a,b)],idx2B[(a,b)]] 
-                      + Gamma[idx2B[(i,j)],idx2B[(i,j)]] 
-                      - Gamma[idx2B[(a,i)],idx2B[(a,i)]] 
-                      - Gamma[idx2B[(a,j)],idx2B[(a,j)]] 
-                      - Gamma[idx2B[(b,i)],idx2B[(b,i)]] 
-                      - Gamma[idx2B[(b,j)],idx2B[(b,j)]] 
+                      H1B[a,a] + H1B[b,b] - H1B[i,i] - H1B[j,j]
+                      + H2B[idx2B[(a,b)],idx2B[(a,b)]]
+                      + H2B[idx2B[(i,j)],idx2B[(i,j)]]
+                      - H2B[idx2B[(a,i)],idx2B[(a,i)]]
+                      - H2B[idx2B[(a,j)],idx2B[(a,j)]]
+                      - H2B[idx2B[(b,i)],idx2B[(b,i)]]
+                      - H2B[idx2B[(b,j)],idx2B[(b,j)]]
                     )
 
-                    val = 0.5 * np.arctan(2 * Gamma[idx2B[(a,b)], idx2B[(i,j)]] / denom)
+                    val = 0.5 * np.arctan(2 * H2B[idx2B[(a,b)], idx2B[(i,j)]] / denom)
 
                     eta2B[idx2B[(a,b)],idx2B[(i,j)]] = val
                     eta2B[idx2B[(i,j)],idx2B[(a,b)]] = -val
@@ -383,7 +383,7 @@ def eta_white_atan(f, Gamma, user_data):
     return eta1B, eta2B
 
 
-def eta_wegner(f, Gamma, user_data):
+def eta_wegner(H1B, H2B, user_data):
 
     dim1B     = user_data["dim1B"]
     holes     = user_data["holes"]
@@ -398,29 +398,29 @@ def eta_wegner(f, Gamma, user_data):
 
 
     # split Hamiltonian in diagonal and off-diagonal parts
-    fd      = np.zeros_like(f)
-    fod     = np.zeros_like(f)
-    Gammad  = np.zeros_like(Gamma)
-    Gammaod = np.zeros_like(Gamma)
+    fd      = np.zeros_like(H1B)
+    fod     = np.zeros_like(H1B)
+    Gammad  = np.zeros_like(H2B)
+    Gammaod = np.zeros_like(H2B)
 
     for a in particles:
         for i in holes:
-            fod[a, i] = f[a,i]
-            fod[i, a] = f[i,a]
-    fd = f - fod
+            fod[a, i] = H1B[a,i]
+            fod[i, a] = H1B[i,a]
+    fd = H1B - fod
 
     for a in particles:
         for b in particles:
             for i in holes:
                 for j in holes:
-                    Gammaod[idx2B[(a,b)], idx2B[(i,j)]] = Gamma[idx2B[(a,b)], idx2B[(i,j)]]
-                    Gammaod[idx2B[(i,j)], idx2B[(a,b)]] = Gamma[idx2B[(i,j)], idx2B[(a,b)]]
-    Gammad = Gamma - Gammaod
+                    Gammaod[idx2B[(a,b)], idx2B[(i,j)]] = H2B[idx2B[(a,b)], idx2B[(i,j)]]
+                    Gammaod[idx2B[(i,j)], idx2B[(a,b)]] = H2B[idx2B[(i,j)], idx2B[(a,b)]]
+    Gammad = H2B - Gammaod
 
 
     #############################        
     # one-body flow equation  
-    eta1B  = np.zeros_like(f)
+    eta1B  = np.zeros_like(H1B)
 
     # 1B - 1B
     eta1B += commutator(fd, fod)
@@ -460,7 +460,7 @@ def eta_wegner(f, Gamma, user_data):
 
     #############################        
     # two-body flow equation  
-    eta2B = np.zeros_like(Gamma)
+    eta2B = np.zeros_like(H2B)
 
     # 1B - 2B
     for p in range(dim1B):
@@ -531,20 +531,6 @@ def flow_imsrg2(eta1B, eta2B, f, Gamma, user_data):
     occB_2B   = user_data["occB_2B"]
     occC_2B   = user_data["occC_2B"]
     occphA_2B = user_data["occphA_2B"]
-
-    #############################        
-    # zero-body flow equation
-    dE = 0.0
-
-    for i in holes:
-        for a in particles:
-            dE += eta1B[i,a] * f[a,i] - eta1B[a,i] * f[i,a]
-
-    for i in holes:
-        for j in holes:
-            for a in particles:
-                for b in particles:
-                    dE += 0.5 * eta2B[idx2B[(i,j)], idx2B[(a,b)]] * Gamma[idx2B[(a,b)], idx2B[(i,j)]]
 
 
     #############################        
@@ -642,7 +628,7 @@ def flow_imsrg2(eta1B, eta2B, f, Gamma, user_data):
     dGamma += etaGamma
 
 
-    return dE, df, dGamma
+    return df, dGamma
 
 
 #-----------------------------------------------------------------------------------
@@ -652,22 +638,18 @@ def get_operator_from_y(y, dim1B, dim2B):
   
     # reshape the solution vector into 0B, 1B, 2B pieces
     ptr = 0
-    zero_body = y[ptr]
-
-    ptr += 1
     one_body = reshape(y[ptr:ptr+dim1B*dim1B], (dim1B, dim1B))
 
     ptr += dim1B*dim1B
     two_body = reshape(y[ptr:ptr+dim2B*dim2B], (dim2B, dim2B))
 
-    return zero_body,one_body,two_body
+    return one_body,two_body
 
 
 def derivative_wrapper(t, y, user_data):
 
     dim1B = user_data["dim1B"]
     dim2B = dim1B*dim1B
-
 
     holes     = user_data["holes"]
     particles = user_data["particles"]
@@ -684,19 +666,18 @@ def derivative_wrapper(t, y, user_data):
     calc_rhs  = user_data["calc_rhs"]
 
     # extract operator pieces from solution vector
-    E, f, Gamma = get_operator_from_y(y, dim1B, dim2B)
+    f, Gamma = get_operator_from_y(y, dim1B, dim2B)
 
     # calculate the generator
     eta1B, eta2B = calc_eta(f, Gamma, user_data)
 
     # calculate the right-hand side
-    dE, df, dGamma = calc_rhs(eta1B, eta2B, f, Gamma, user_data)
+    df, dGamma = calc_rhs(eta1B, eta2B, f, Gamma, user_data)
 
     # convert derivatives into linear array
-    dy   = np.append([dE], np.append(reshape(df, -1), reshape(dGamma, -1)))
+    dy   = np.append(reshape(df, -1), reshape(dGamma, -1))
 
     # share data
-    user_data["dE"] = dE
     user_data["eta_norm"] = np.linalg.norm(eta1B,ord='fro')+np.linalg.norm(eta2B,ord='fro')
     
     return dy
@@ -729,7 +710,7 @@ def pairing_hamiltonian(delta, g, ff, h, user_data):
                     H2B[idx2B[(j,i)],idx2B[(k,l)]] = 0.5*g
                     H2B[idx2B[(i,j)],idx2B[(l,k)]] = 0.5*g
                     H2B[idx2B[(j,i)],idx2B[(l,k)]] = -0.5*g
-
+    
     # one particle-hole interaction
     # A^{p+p-}_{q-r+} + A^{r+q-}_{p-p+}
     for (i, j) in bas2B:
@@ -758,103 +739,6 @@ def pairing_hamiltonian(delta, g, ff, h, user_data):
                     H2B[idx2B[(j,i)],idx2B[(l,k)]] -= 0.5*h
 
     return H1B, H2B
-
-#-----------------------------------------------------------------------------------
-# normal-ordered pairing Hamiltonian
-#-----------------------------------------------------------------------------------
-def normal_order(H1B, H2B, user_data):
-    bas1B     = user_data["bas1B"]
-    bas2B     = user_data["bas2B"]
-    idx2B     = user_data["idx2B"]
-    particles = user_data["particles"]
-    holes     = user_data["holes"]
-
-    # 0B part
-    E = 0.0
-    for i in holes:
-        E += H1B[i,i]
-
-    for i in holes:
-        for j in holes:
-            E += 0.5*H2B[idx2B[(i,j)],idx2B[(i,j)]]  
-
-    # 1B part
-    f = H1B
-    for i in bas1B:
-        for j in bas1B:
-            for h in holes:
-                f[i,j] += H2B[idx2B[(i,h)],idx2B[(j,h)]]  
-
-    # 2B part
-    Gamma = H2B
-
-    return E, f, Gamma
-
-#-----------------------------------------------------------------------------------
-# Perturbation theory
-#-----------------------------------------------------------------------------------
-def calc_mbpt2(f, Gamma, user_data):
-    DE2 = 0.0
-
-    particles = user_data["particles"]
-    holes     = user_data["holes"]
-    idx2B     = user_data["idx2B"]
-
-    for i in holes:
-        for j in holes:
-            for a in particles:
-                for b in particles:
-                    denom = f[i,i] + f[j,j] - f[a,a] - f[b,b]
-                    me    = Gamma[idx2B[(a,b)],idx2B[(i,j)]]
-                    DE2  += 0.25*me*me/denom
-
-    return DE2
-
-def calc_mbpt3(f, Gamma, user_data):
-    particles = user_data["particles"]
-    holes     = user_data["holes"]
-    idx2B     = user_data["idx2B"]
-
-    # DE3 = 0.0
-
-    DE3pp = 0.0
-    DE3hh = 0.0
-    DE3ph = 0.0
-
-    for a in particles:
-        for b in particles:
-            for c in particles:
-                for d in particles:
-                    for i in holes:
-                        for j in holes:
-                            denom = (f[i,i] + f[j,j] - f[a,a] - f[b,b])*(f[i,i] + f[j,j] - f[c,c] - f[d,d])
-                            me    = (Gamma[idx2B[(i,j)],idx2B[(a,b)]]*Gamma[idx2B[(a,b)],idx2B[(c,d)]]*
-                                     Gamma[idx2B[(c,d)],idx2B[(i,j)]])
-                            DE3pp += 0.125*me/denom
-
-    for i in holes:
-        for j in holes:
-            for k in holes:
-                for l in holes:
-                    for a in particles:
-                        for b in particles:
-                            denom = (f[i,i] + f[j,j] - f[a,a] - f[b,b])*(f[k,k] + f[l,l] - f[a,a] - f[b,b])
-                            me    = (Gamma[idx2B[(a,b)],idx2B[(k,l)]]*Gamma[idx2B[(k,l)],idx2B[(i,j)]]*
-                                     Gamma[idx2B[(i,j)],idx2B[(a,b)]])
-                            DE3hh += 0.125*me/denom
-
-    for i in holes:
-        for j in holes:
-            for k in holes:
-                for a in particles:
-                    for b in particles:
-                        for c in particles:
-                            denom = (f[i,i] + f[j,j] - f[a,a] - f[b,b])*(f[k,k] + f[j,j] - f[a,a] - f[c,c])
-                            me    = (Gamma[idx2B[(i,j)],idx2B[(a,b)]]*Gamma[idx2B[(k,b)],idx2B[(i,c)]]*
-                                     Gamma[idx2B[(a,c)],idx2B[(k,j)]])
-                            DE3ph -= me/denom
-
-    return DE3pp+DE3hh+DE3ph
 
 
 def bitCount(int_type):
@@ -1107,30 +991,6 @@ def Hamiltonian(H1B, H2B, user_data):
     return H
 
 
-def De_normal(E, f, Gamma, user_data):
-    dim1B     = user_data["dim1B"]
-    bas1B     = user_data["bas1B"]
-    bas2B     = user_data["bas2B"]
-    holes     = user_data["holes"]
-    
-    H1B = f.copy()
-    for i in bas1B:
-        for j in bas1B:
-            for h in holes:
-                H1B[i,j] -= Gamma[idx2B[(i,h)],idx2B[(j,h)]]
-
-    H0B = E
-    for i in holes:
-        H0B -= H1B[i,i]
-    for i in holes:
-        for k in holes:
-            #H0B -= 0.25*Gamma[idx2B[(i,k)],idx2B[(i,k)]]
-            H0B += 0.5*Gamma[idx2B[(i,k)],idx2B[(k,i)]]
-
-    H2B = Gamma.copy()
-    return H0B, H1B, H2B
-
-
 def derivative(y, t, dim):
     
     # reshape the solution vector into a dim x dim matrix
@@ -1166,8 +1026,8 @@ def imageshow(object):
 # grab delta and g from the command line
 delta      = 1.
 g          = 0.5
-ff         = 0.05
-h          = 0.01
+ff         = 0.0
+h          = 0.0
 
 nparticles  = 4
 
@@ -1231,36 +1091,14 @@ user_data  = {
 
 # set up initial Hamiltonian
 H1B, H2B = pairing_hamiltonian(delta, g, ff, h, user_data)
-
+imageshow(H1B)
+imageshow(H2B)
 
 Hamilton0 = Hamiltonian(H1B, H2B, user_data)
-'''
-#*******************************************************************************************
-
-#eigenvalues = eigvalsh(Hamilton0)
-y0 = reshape(Hamilton0, -1)
-r = [x for x in range(10,700,60)]
-flowparams = array([0., 0.001, 0.005, 0.01,  0.05, 0.1, 0.2, 0.5]+r)
-l = len(flowparams)
-dim = len(states_0)
-ys = odeint(derivative, y0, flowparams, args=(dim,))
-Hs = reshape(ys, (-1,dim,dim))
-
-plt.figure(figsize=(2.5*4, 2.5*5))
-plt.subplots_adjust(bottom=.05, left=.05, right=.99, top=.95, hspace=.4)
-
-for i in range(20):
-    plt.subplot(4,5,i+1)
-    im = plt.imshow(Hs[i],cmap=plt.get_cmap('RdBu_r'),interpolation='nearest',vmin = -g, vmax = g)
-    plt.title("s = "+str(flowparams[i]), size = 6)
-plt.show()
-
-#*******************************************************************************************
-'''
-E, f, Gamma = normal_order(H1B, H2B, user_data)
+imageshow(Hamilton0)
 
 # reshape Hamiltonian into a linear array (initial ODE vector)
-y0   = np.append([E], np.append(reshape(f, -1), reshape(Gamma, -1)))
+y0   = np.append(reshape(H1B, -1), reshape(H2B, -1))
 
 # integrate flow equations 
 solver = sp.integrate.ode(derivative_wrapper,jac=None)
@@ -1271,64 +1109,34 @@ solver.set_initial_value(y0, 0.)
 sfinal = 50
 ds = 0.1
 
-print(" %-8s  %-10s    %-10s    %-10s    %-10s    %-10s   %-10s  %-10s   %-10s"%(
-        "s", "E" , "DE(2)", "DE(3)", "E+DE", "dE/ds", 
-        "||eta||", "||fod||", "||Gammaod||"))
 print("-" * 118)
 
-obj = {}
-for i in range(36):
-    obj[str(i)] = []
-time = []
+
 while solver.successful() and solver.t < sfinal:
     ys = solver.integrate(sfinal, step=True)
         
     dim2B = dim1B*dim1B
-    E, f, Gamma = get_operator_from_y(ys, dim1B, dim2B)
+    H1B, H2B = get_operator_from_y(ys, dim1B, dim2B)
     
-    DE2 = calc_mbpt2(f, Gamma, user_data)
-    DE3 = calc_mbpt3(f, Gamma, user_data)
 
-    norm_fod     = calc_fod_norm(f, user_data)
-    norm_Gammaod = calc_Gammaod_norm(Gamma, user_data)
+    norm_fod     = calc_fod_norm(H1B, user_data)
+    norm_Gammaod = calc_Gammaod_norm(H2B, user_data)
     
-    H0B, H1B, H2B = De_normal(E, f, Gamma, user_data)
     Hamilton = Hamiltonian(H1B, H2B, user_data)
     
-    for i in range(36):
-        obj[str(i)].append(Hamilton[i,i])
-    time.append(solver.t)
+    
 
-    print("%8.5f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f   %10.8f"%(
-        solver.t, E , DE2, DE3, E+DE2+DE3, user_data["dE"], user_data["eta_norm"], norm_fod, norm_Gammaod))
-    if abs(DE2/E)<10e-8: break
+    print("%8.5f   %10.8f   %10.8f   %10.8f"%(
+       solver.t,  user_data["eta_norm"], norm_fod, norm_Gammaod))
+    if abs(user_data["eta_norm"])<10e-7: break
 
+imageshow(H1B)
+imageshow(H2B)
 
-plt.figure(figsize=(1.8*6, 2.0*6))
-plt.subplots_adjust(bottom=.05, left=.05, right=.99, top=.95, hspace=.4)
-
-for i in range(36):
-    plt.subplot(6,6,i+1)
-    plt.plot(time,obj[str(i)])
-    plt.title(str(i+1)+"th Eigenvalue", size = 6)
-plt.show()
-
-
-H0B,H1B,H2B = De_normal(E, f, Gamma, user_data)
 Hamilton = Hamiltonian(H1B, H2B, user_data)
+imageshow(Hamilton)
+print (Hamilton[0,0])
 
 
-'''
-import xlsxwriter
-workbook = xlsxwriter.Workbook("Hamiltonian_end.xlsx")
-worksheet = workbook.add_worksheet()
-row = 0
-for col, data in enumerate(Hamilton):
-    worksheet.write_column(row, col, data)
-workbook.close()
-'''
-
-ew = eigvalsh(Hamilton)
-print (ew)
 
 
