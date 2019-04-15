@@ -1166,8 +1166,8 @@ def imageshow(object):
 # grab delta and g from the command line
 delta      = 1.
 g          = 0.5
-ff         = 0.05
-h          = 0.01
+ff         = 0.
+h          = 0.
 
 nparticles  = 4
 
@@ -1280,6 +1280,7 @@ obj = {}
 for i in range(36):
     obj[str(i)] = []
 time = []
+gs = []
 while solver.successful() and solver.t < sfinal:
     ys = solver.integrate(sfinal, step=True)
         
@@ -1292,8 +1293,13 @@ while solver.successful() and solver.t < sfinal:
     norm_fod     = calc_fod_norm(f, user_data)
     norm_Gammaod = calc_Gammaod_norm(Gamma, user_data)
     
-    H0B, H1B, H2B = De_normal(E, f, Gamma, user_data)
-    Hamilton = Hamiltonian(H1B, H2B, user_data)
+    H0B, H1B, H2BB = De_normal(E, f, Gamma, user_data)
+    Hamilton = Hamiltonian(H1B, H2BB, user_data)
+    
+    
+    gss = np.trace(np.matmul(H2BB,H2B))/np.sqrt(np.trace(np.matmul(H2BB,H2BB)))
+    
+    gs.append(gss)
     
     for i in range(36):
         obj[str(i)].append(Hamilton[i,i])
@@ -1303,6 +1309,10 @@ while solver.successful() and solver.t < sfinal:
         solver.t, E , DE2, DE3, E+DE2+DE3, user_data["dE"], user_data["eta_norm"], norm_fod, norm_Gammaod))
     if abs(DE2/E)<10e-8: break
 
+
+plt.plot(time,gs)
+plt.show()
+exit(0)
 
 plt.figure(figsize=(1.8*6, 2.0*6))
 plt.subplots_adjust(bottom=.05, left=.05, right=.99, top=.95, hspace=.4)
