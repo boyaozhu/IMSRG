@@ -1232,6 +1232,9 @@ user_data  = {
 # set up initial Hamiltonian
 H1B, H2B = pairing_hamiltonian(delta, g, ff, h, user_data)
 
+u,s,v = np.linalg.svd(H2B)
+s0 = s[0]
+k = s0/g
 
 Hamilton0 = Hamiltonian(H1B, H2B, user_data)
 '''
@@ -1293,12 +1296,10 @@ while solver.successful() and solver.t < sfinal:
     norm_fod     = calc_fod_norm(f, user_data)
     norm_Gammaod = calc_Gammaod_norm(Gamma, user_data)
     
-    H0B, H1B, H2BB = De_normal(E, f, Gamma, user_data)
-    Hamilton = Hamiltonian(H1B, H2BB, user_data)
+    H0B, H1B, H2Bs = De_normal(E, f, Gamma, user_data)
+    Hamilton = Hamiltonian(H1B, H2Bs, user_data)
     
-    
-    gss = np.trace(np.matmul(H2BB,H2B))/np.sqrt(np.trace(np.matmul(H2BB,H2BB)))
-    
+    gss = np.trace(np.matmul(H2Bs,H2B))/(s0*k)          #/np.sqrt(np.trace(np.matmul(H2Bs,H2Bs)))/k
     gs.append(gss)
     
     for i in range(36):
