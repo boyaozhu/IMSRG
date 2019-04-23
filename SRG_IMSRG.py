@@ -1310,8 +1310,23 @@ while solver.successful() and solver.t < sfinal:
         solver.t, E , DE2, DE3, E+DE2+DE3, user_data["dE"], user_data["eta_norm"], norm_fod, norm_Gammaod))
     if abs(DE2/E)<10e-8: break
 
+gs1 = np.array([gs])
+y = np.log(gs1)
+one = np.ones(len(time))
+time1= np.array([time])
+X = np.vstack((one,time1))
+print X.shape
+k = np.linalg.inv(X.dot(X.T)).dot(X).dot(y.T)
+A = np.exp(k[0])
+tao = k[1]
+print A    # 0.45765511
+print tao  #-0.07760605
+f = A*np.exp(tao*time1)
+f = f.reshape(81,1)
+time1 = time1.reshape(81,1)
 
 plt.plot(time,gs)
+plt.plot(time1,f)
 plt.show()
 exit(0)
 
